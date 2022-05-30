@@ -6,8 +6,32 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/RussellLuo/timingwheel/delayqueue"
+	"github.com/alkaid/timingwheel/logger"
+	"github.com/panjf2000/ants/v2"
+	"go.uber.org/zap"
+
+	"github.com/alkaid/timingwheel/delayqueue"
 )
+
+const (
+	// LoopForever is a constant indicating that timer should loop forever
+	LoopForever = -1
+)
+
+type everyScheduler struct {
+	Interval  time.Duration
+	Count     int
+	currCount int
+}
+
+func (s *everyScheduler) Next(prev time.Time) time.Time {
+	s.currCount++
+	// 超过执行次数 返回零值,底层有判断零值不添加任务
+	if s.Count != LoopForever && s.currCount >= s.Count {
+		return time.Time{}
+	}
+	return prev.Add(s.Interval)
+}
 
 // TimingWheel is an implementation of Hierarchical Timing Wheels.
 type TimingWheel struct {
@@ -114,7 +138,10 @@ func (tw *TimingWheel) addOrRun(t *Timer) {
 
 		// Like the standard time.AfterFunc (https://golang.org/pkg/time/#AfterFunc),
 		// always execute the timer's task in its own goroutine.
-		go t.task()
+		err := ants.Submit(t.task)
+		if err != nil {
+			logger.Log.Error("timingwheel run task error", zap.Error(err))
+		}
 	}
 }
 
@@ -223,4 +250,28 @@ func (tw *TimingWheel) ScheduleFunc(s Scheduler, f func()) (t *Timer) {
 	tw.addOrRun(t)
 
 	return
+}
+
+// Cron 添加永远重复的任务
+//  @receiver t
+//  @param interval
+//  @param fn
+//  @return *timingwheel.Timer
+//
+func (t *TimingWheel) Cron(interval time.Duration, fn func()) *Timer {
+	return t.CronWithCount(interval, LoopForever, fn)
+}
+
+// CronWithCount 添加重复次数的任务
+//  @receiver t
+//  @param interval
+//  @param count
+//  @param fn
+//  @return *timingwheel.Timer
+//
+func (t *TimingWheel) CronWithCount(interval time.Duration, count int, fn func()) *Timer {
+	return t.ScheduleFunc(&everyScheduler{
+		Interval: interval,
+		Count:    count,
+	}, fn)
 }

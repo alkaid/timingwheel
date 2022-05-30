@@ -6,7 +6,7 @@ Golang implementation of Hierarchical Timing Wheels.
 ## Installation
 
 ```bash
-$ go get -u github.com/RussellLuo/timingwheel
+$ go get -u github.com/alkaid/timingwheel
 ```
 
 

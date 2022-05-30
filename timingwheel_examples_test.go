@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/RussellLuo/timingwheel"
+	"github.com/alkaid/timingwheel"
 )
 
 func Example_startTimer() {

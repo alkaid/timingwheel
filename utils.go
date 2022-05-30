@@ -3,6 +3,8 @@ package timingwheel
 import (
 	"sync"
 	"time"
+
+	"github.com/panjf2000/ants/v2"
 )
 
 // truncate returns the result of rounding x toward zero to a multiple of m.
@@ -31,8 +33,14 @@ type waitGroupWrapper struct {
 
 func (w *waitGroupWrapper) Wrap(cb func()) {
 	w.Add(1)
-	go func() {
+	err := ants.Submit(func() {
 		cb()
 		w.Done()
-	}()
+	})
+	if err != nil {
+		go func() {
+			cb()
+			w.Done()
+		}()
+	}
 }

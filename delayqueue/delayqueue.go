@@ -66,12 +66,12 @@ func (pq *priorityQueue) Pop() interface{} {
 	return item
 }
 
-func (pq *priorityQueue) PeekAndShift(max int64) (*item, int64) {
+func (pq *priorityQueue) PeekAndShift(max int64) (item *item, priority int64) {
 	if pq.Len() == 0 {
 		return nil, 0
 	}
 
-	item := (*pq)[0]
+	item = (*pq)[0]
 	if item.Priority > max {
 		return nil, item.Priority - max
 	}
