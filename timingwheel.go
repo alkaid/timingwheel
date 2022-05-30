@@ -138,7 +138,15 @@ func (tw *TimingWheel) addOrRun(t *Timer) {
 
 		// Like the standard time.AfterFunc (https://golang.org/pkg/time/#AfterFunc),
 		// always execute the timer's task in its own goroutine.
-		err := ants.Submit(t.task)
+		var err error
+
+		if t.options.Pool != nil && t.options.GoID > -1 {
+			err = t.options.Pool.SubmitWithID(t.options.GoID, t.task)
+		} else if t.options.Pool != nil {
+			err = t.options.Pool.Submit(t.task)
+		} else {
+			err = ants.Submit(t.task)
+		}
 		if err != nil {
 			logger.Log.Error("timingwheel run task error", zap.Error(err))
 		}
@@ -193,11 +201,8 @@ func (tw *TimingWheel) Stop() {
 
 // AfterFunc waits for the duration to elapse and then calls f in its own goroutine.
 // It returns a Timer that can be used to cancel the call using its Stop method.
-func (tw *TimingWheel) AfterFunc(d time.Duration, f func()) *Timer {
-	t := &Timer{
-		expiration: timeToMs(time.Now().UTC().Add(d)),
-		task:       f,
-	}
+func (tw *TimingWheel) AfterFunc(d time.Duration, f func(), opts ...Option) *Timer {
+	t := NewTimer(timeToMs(time.Now().UTC().Add(d)), f, opts...)
 	tw.addOrRun(t)
 	return t
 }
@@ -226,16 +231,16 @@ type Scheduler interface {
 // Afterwards, it will ask the next execution time each time f is about to
 // be executed, and f will be called at the next execution time if the time
 // is non-zero.
-func (tw *TimingWheel) ScheduleFunc(s Scheduler, f func()) (t *Timer) {
+func (tw *TimingWheel) ScheduleFunc(s Scheduler, f func(), opts ...Option) (t *Timer) {
 	expiration := s.Next(time.Now().UTC())
 	if expiration.IsZero() {
 		// No time is scheduled, return nil.
 		return
 	}
 
-	t = &Timer{
-		expiration: timeToMs(expiration),
-		task: func() {
+	t = NewTimer(
+		timeToMs(expiration),
+		func() {
 			// Schedule the task to execute at the next time if possible.
 			expiration := s.Next(msToTime(t.expiration))
 			if !expiration.IsZero() {
@@ -246,7 +251,8 @@ func (tw *TimingWheel) ScheduleFunc(s Scheduler, f func()) (t *Timer) {
 			// Actually execute the task.
 			f()
 		},
-	}
+		opts...,
+	)
 	tw.addOrRun(t)
 
 	return
@@ -258,8 +264,8 @@ func (tw *TimingWheel) ScheduleFunc(s Scheduler, f func()) (t *Timer) {
 //  @param fn
 //  @return *timingwheel.Timer
 //
-func (t *TimingWheel) Cron(interval time.Duration, fn func()) *Timer {
-	return t.CronWithCount(interval, LoopForever, fn)
+func (tw *TimingWheel) Cron(interval time.Duration, fn func(), opt ...Option) *Timer {
+	return tw.CronWithCount(interval, LoopForever, fn)
 }
 
 // CronWithCount 添加重复次数的任务
@@ -269,8 +275,8 @@ func (t *TimingWheel) Cron(interval time.Duration, fn func()) *Timer {
 //  @param fn
 //  @return *timingwheel.Timer
 //
-func (t *TimingWheel) CronWithCount(interval time.Duration, count int, fn func()) *Timer {
-	return t.ScheduleFunc(&everyScheduler{
+func (tw *TimingWheel) CronWithCount(interval time.Duration, count int, fn func(), opt ...Option) *Timer {
+	return tw.ScheduleFunc(&everyScheduler{
 		Interval: interval,
 		Count:    count,
 	}, fn)

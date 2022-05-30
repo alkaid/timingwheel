@@ -21,6 +21,21 @@ type Timer struct {
 
 	// The timer's element.
 	element *list.Element
+	options *Options
+}
+
+func NewTimer(expiration int64, task func(), opts ...Option) *Timer {
+	t := &Timer{
+		expiration: expiration,
+		task:       task,
+		options: &Options{
+			GoID: -1,
+		},
+	}
+	for _, opt := range opts {
+		opt(t.options)
+	}
+	return t
 }
 
 func (t *Timer) getBucket() *bucket {
