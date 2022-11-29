@@ -62,8 +62,9 @@ func NewLogger(cfg zap.Config, opts ...Option) *Logger {
 }
 
 // SetLevel 动态改变打印级别
-//  @param level 支持的类型为int,zapcore.Level,string,int,zap.AtomicLevel. 建议使用string
-//  支持的string为 DEBUG|INFO|WARN|ERROR|DPANIC|PANIC|FATAL
+//
+//	@param level 支持的类型为int,zapcore.Level,string,int,zap.AtomicLevel. 建议使用string
+//	支持的string为 DEBUG|INFO|WARN|ERROR|DPANIC|PANIC|FATAL
 func (l *Logger) SetLevel(level interface{}) {
 	var err error
 	switch val := level.(type) {
@@ -91,10 +92,11 @@ func (l *Logger) SetLevel(level interface{}) {
 }
 
 // SetDevelopment 是否开启开发者模式 true为development mode 否则为production mode
-//  development mode: zap.NewDevelopmentConfig()模式
-//  production mode:zap.NewProductionConfig()模式
-//  @receiver l
-//  @param enable
+//
+//	development mode: zap.NewDevelopmentConfig()模式
+//	production mode:zap.NewProductionConfig()模式
+//	@receiver l
+//	@param enable
 func (l *Logger) SetDevelopment(enable bool) {
 	var cfg zap.Config
 	if enable {
@@ -140,7 +142,8 @@ func (l *Logger) ReloadFactory(k string, onReloadeds ...func()) LoaderFactory {
 }
 
 // LoaderFactory ConfLoader 工厂,用于生成需要动态包装的 ConfLoader 实现
-//  @implement ConfLoader
+//
+//	@implement ConfLoader
 type LoaderFactory struct {
 	// ConfLoader.Reload 的包装函数
 	ReloadApply func(key string, confStruct interface{})
@@ -153,4 +156,13 @@ func (l LoaderFactory) Reload(key string, confStruct interface{}) {
 }
 func (l LoaderFactory) Provide() (key string, confStruct interface{}) {
 	return l.ProvideApply()
+}
+
+func SetLevel(level any) {
+	Manager.SetLevel(level)
+}
+func SetDevelopment(enable bool) {
+	Manager.SetDevelopment(enable)
+	Log = Manager.Log
+	Sugar = Manager.Sugar
 }

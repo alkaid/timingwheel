@@ -259,25 +259,25 @@ func (tw *TimingWheel) ScheduleFunc(s Scheduler, f func(), opts ...Option) (t *T
 }
 
 // Cron 添加永远重复的任务
-//  @receiver t
-//  @param interval
-//  @param fn
-//  @return *timingwheel.Timer
 //
+//	@receiver t
+//	@param interval
+//	@param fn
+//	@return *timingwheel.Timer
 func (tw *TimingWheel) Cron(interval time.Duration, fn func(), opt ...Option) *Timer {
-	return tw.CronWithCount(interval, LoopForever, fn)
+	return tw.CronWithCount(interval, LoopForever, fn, opt...)
 }
 
 // CronWithCount 添加重复次数的任务
-//  @receiver t
-//  @param interval
-//  @param count
-//  @param fn
-//  @return *timingwheel.Timer
 //
+//	@receiver t
+//	@param interval
+//	@param count
+//	@param fn
+//	@return *timingwheel.Timer
 func (tw *TimingWheel) CronWithCount(interval time.Duration, count int, fn func(), opt ...Option) *Timer {
 	return tw.ScheduleFunc(&everyScheduler{
 		Interval: interval,
 		Count:    count,
-	}, fn)
+	}, fn, opt...)
 }
