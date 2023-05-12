@@ -140,10 +140,8 @@ func (tw *TimingWheel) addOrRun(t *Timer) {
 		// always execute the timer's task in its own goroutine.
 		var err error
 
-		if t.options.Pool != nil && t.options.GoID > -1 {
-			err = t.options.Pool.SubmitWithID(t.options.GoID, t.task)
-		} else if t.options.Pool != nil {
-			err = t.options.Pool.Submit(t.task)
+		if t.options.Pool != nil {
+			err = t.options.Pool.Submit(t.options.GoID, t.task)
 		} else {
 			err = ants.Submit(t.task)
 		}
